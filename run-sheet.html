@@ -1,0 +1,680 @@
+<title>Daily Run Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#F2F4F1; --surface:#FFFFFF; --sunk:#E8ECE6; --ink:#141916; --muted:#5A655F; --line:#D7DDD6;
+  --accent:#2944C4; --accent-ink:#FFFFFF; --accent-soft:#E3E8FB;
+  --done:#1D8752; --done-soft:#DFF1E6; --warn:#A35E0B; --warn-soft:#FAEDD8; --danger:#B8372C; --rec:#D8352A;
+  --h0:#2944C4; --h1:#C4480F; --h2:#0E7C70; --h3:#A3245C; --h4:#6A34C9; --h5:#8A6A00;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0E1210; --surface:#161B18; --sunk:#1E2521; --ink:#E7ECE8; --muted:#94A29A; --line:#2C3530;
+    --accent:#90A4FF; --accent-ink:#0E1210; --accent-soft:#1E2642;
+    --done:#4CC38A; --done-soft:#14291E; --warn:#E6A24C; --warn-soft:#2D2212; --danger:#F07A6F; --rec:#FF5A4E;
+    --h0:#90A4FF; --h1:#FF9A6B; --h2:#4CD1C0; --h3:#F58AB8; --h4:#B99BFF; --h5:#E3C24F;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1210; --surface:#161B18; --sunk:#1E2521; --ink:#E7ECE8; --muted:#94A29A; --line:#2C3530;
+  --accent:#90A4FF; --accent-ink:#0E1210; --accent-soft:#1E2642;
+  --done:#4CC38A; --done-soft:#14291E; --warn:#E6A24C; --warn-soft:#2D2212; --danger:#F07A6F; --rec:#FF5A4E;
+  --h0:#90A4FF; --h1:#FF9A6B; --h2:#4CD1C0; --h3:#F58AB8; --h4:#B99BFF; --h5:#E3C24F;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:14px 72px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+
+.masthead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.01em}
+.rec{width:10px;height:10px;border-radius:50%;background:var(--rec);box-shadow:0 0 0 3px color-mix(in srgb,var(--rec) 22%,transparent)}
+.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.sync.live::before{background:var(--done)}
+.sync.local::before{background:var(--warn)}
+
+.tabs{display:flex;gap:4px;margin-top:14px;background:var(--sunk);padding:4px;border-radius:10px}
+.tabs button{flex:1;border:0;background:transparent;padding:9px 10px;border-radius:7px;font-weight:600;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.tabs .n{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:4px}
+
+.note{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--warn-soft);color:var(--warn);font-size:13px;display:flex;gap:10px;justify-content:space-between;align-items:center}
+.note button{border:0;background:none;color:inherit;text-decoration:underline;padding:0}
+
+.datebar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:8px;padding-block:14px 10px;margin-top:4px;flex-wrap:wrap}
+.nav{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:20px;line-height:1;display:grid;place-content:center}
+.dl{display:flex;flex-direction:column;min-width:0;flex:1}
+.dl .rel{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.02em;line-height:1.05}
+.dl .abs{font-size:13px;color:var(--muted)}
+.link{border:0;background:none;color:var(--accent);font-weight:600;padding:6px 0}
+
+.score{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.meter{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px}
+.mt{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.mt span{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.mt b{font-family:var(--display);font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.mt b i{font-style:normal;font-size:15px;color:var(--muted);font-weight:600}
+.bar{position:relative;height:6px;border-radius:3px;background:var(--sunk);margin-top:10px}
+.bar span{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--accent);transition:width .25s ease}
+.bar.full span{background:var(--done)}
+.bar em{position:absolute;top:-3px;width:2px;height:12px;background:var(--ink);opacity:.45}
+.meter small{display:block;margin-top:7px;font-size:12px;color:var(--muted)}
+
+.guide{margin:12px 0 0;padding:11px 13px;border-radius:10px;font-size:14px;background:var(--accent-soft);color:var(--ink)}
+.guide.ok{background:var(--done-soft)}
+.guide.warn{background:var(--warn-soft)}
+.guide b{font-weight:600}
+
+.prod,.carry,.panel{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.prod{border-top:4px solid var(--pc)}
+.ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:13px 14px 4px}
+.ph h2{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--pc);flex:none}
+.count{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.count.done{color:var(--done)}
+.acct{margin:0;padding:0 14px 8px;font-size:13px;color:var(--muted)}
+.status{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:5px;background:var(--sunk);color:var(--muted)}
+.s-scaling{background:var(--done-soft);color:var(--done)}
+.s-testing{background:var(--accent-soft);color:var(--accent)}
+
+.vids{list-style:none;margin:0;padding:0}
+.vid{display:flex;gap:12px;padding:12px 14px;border-top:1px solid var(--line)}
+.checks{display:flex;flex-direction:column;gap:2px;flex:none}
+.ck{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;min-height:34px}
+.ck input{appearance:none;-webkit-appearance:none;margin:0;width:24px;height:24px;border:2px solid var(--line);border-radius:7px;background:var(--surface);display:grid;place-content:center;cursor:pointer;transition:background .12s,border-color .12s}
+.ck input:hover{border-color:var(--muted)}
+.ck input:checked{background:var(--done);border-color:var(--done)}
+.ck input:checked::after{content:"";width:10px;height:5px;border-left:2.5px solid var(--surface);border-bottom:2.5px solid var(--surface);transform:translateY(-1px) rotate(-45deg)}
+.vbody{min-width:0;flex:1}
+.l1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.l1 strong{font-weight:600;font-size:15px}
+.kind{font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px;white-space:nowrap}
+.k-new{background:var(--accent-soft);color:var(--accent)}
+.k-style{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.k-split{background:var(--warn-soft);color:var(--warn)}
+.k-repost{background:var(--sunk);color:var(--muted)}
+.vnotes{margin:4px 0 0;font-size:14px;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.vmeta{display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap;margin-top:6px;font-size:13px}
+.vcode{font-family:var(--mono);font-size:12px;background:var(--sunk);padding:2px 6px;border-radius:5px;letter-spacing:.02em}
+.vmeta a{color:var(--accent);font-weight:600;text-decoration:none}
+.vmeta button{border:0;background:none;padding:4px 0;color:var(--muted);font-size:13px}
+.vmeta button:hover{color:var(--ink)}
+.vmeta .from{color:var(--warn);font-weight:600}
+.vid.posted .l1 strong{text-decoration:line-through;text-decoration-color:var(--muted);color:var(--muted)}
+.vid.posted .vnotes{opacity:.7}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--danger);font-weight:600}
+
+.pfoot{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px 14px;border-top:1px solid var(--line)}
+.empty{padding:14px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 13px;font-weight:600;font-size:14px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:var(--surface)}
+.btn.ghost{border-style:dashed;color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:default}
+
+.carry{border-color:var(--warn)}
+.carry .ph h2{font-size:16px}
+.carry .ph p{margin:0;width:100%;font-size:13px;color:var(--muted)}
+
+form.card{padding:14px;border-top:1px solid var(--line);background:var(--sunk)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f.wide{grid-column:1/-1}
+.f>span{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.f input,.f select,.f textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:9px 10px;font-size:16px}
+.f textarea{resize:vertical;min-height:60px}
+.factions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+.lu{display:grid;grid-template-columns:1.2fr .9fr 1.6fr auto;gap:6px;align-items:center}
+.lu input,.lu select{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px;font-size:15px;min-width:0}
+.lu button{border:0;background:none;color:var(--muted);font-size:18px;width:32px;height:36px}
+.lu-list{display:flex;flex-direction:column;gap:6px}
+
+.pcard{padding:14px;border-top:1px solid var(--line)}
+.pcard:first-of-type{border-top:0}
+.pcard .ph{padding:0}
+.code{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.pnotes{margin:6px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.plink{font-size:13px;color:var(--accent);font-weight:600;text-decoration:none;overflow-wrap:anywhere}
+.lineup{margin:8px 0 0;padding-left:20px;font-size:14px;color:var(--muted)}
+.lbl{display:block;margin-top:10px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px;flex-wrap:wrap}
+.panel-h h2{font-size:18px;font-weight:800}
+.panel .body{padding:0 14px 14px;font-size:14px}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.targets{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;padding:0 14px 14px}
+.loading{padding:40px 0;text-align:center;color:var(--muted)}
+
+@media (max-width:520px){
+  .fgrid,.targets{grid-template-columns:1fr}
+  .lu{grid-template-columns:1fr 1fr auto;}
+  .lu .lu-notes{grid-column:1/-1;grid-row:2}
+  .lu-row{padding-bottom:8px;border-bottom:1px dashed var(--line)}
+  .dl .rel{font-size:22px}
+  .mt b{font-size:22px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap"><div id="app"><p class="loading">Loading your run sheet…</p></div></div>
+
+<datalist id="concepts">
+  <option value="3-2-1 Reveal"></option>
+  <option value="Discovery / Surprise Store"></option>
+  <option value="Shelf Rush / Run Don't Walk"></option>
+  <option value="Gifting / Gift Reaction"></option>
+  <option value="Prototype vs Result"></option>
+  <option value="Partner Scold"></option>
+  <option value="Unboxing"></option>
+  <option value="Install / Setup POV"></option>
+  <option value="Doorbell / Security-Cam POV"></option>
+  <option value="Street / Bystander Reaction"></option>
+  <option value="Checkout / POS Reveal"></option>
+  <option value="Talking Head Holding Product"></option>
+  <option value="Authority Witness"></option>
+  <option value="Vendor Rejection Arc"></option>
+  <option value="What They See / Don't See"></option>
+  <option value="Discouragement Hook"></option>
+  <option value="Convention / Market Indifference"></option>
+  <option value="POV Booth Confrontation"></option>
+  <option value="Emotional Vehicle"></option>
+  <option value="Making / Process Clips"></option>
+  <option value="Day N Counter"></option>
+</datalist>
+
+<script>
+const $app = document.getElementById('app');
+const KINDS = [['new','New concept'],['style','New style'],['split','Split test'],['repost','Repost']];
+const KIND = Object.fromEntries(KINDS);
+const STATUS = {testing:'Testing', scaling:'Scaling', paused:'Paused'};
+
+const S = {
+  tab: location.hash === '#products' ? 'products' : 'day',
+  date: '', lastToday: '',
+  products: [], dayVideos: [], openVideos: [],
+  settings: {minVideos: 3, minNew: 2},
+  mode: 'loading', dayLoaded: false,
+  adding: null, editing: null, confirm: null,
+  editingProduct: null, draft: null, confirmProduct: null,
+  busy: false, note: ''
+};
+
+/* ---------- helpers ---------- */
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const today = () => ymd(new Date());
+const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return ymd(d); };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isNew = v => v.kind === 'new' || v.kind === 'style';
+const byT = (a, b) => (a.t || 0) - (b.t || 0);
+const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
+const prodById = id => S.products.find(p => p.id === id);
+const findVideo = id => S.dayVideos.find(v => v.id === id) || S.openVideos.find(v => v.id === id);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
+function dayLabel(s) {
+  const t = today();
+  if (s === t) return 'Today';
+  if (s === addDays(t, 1)) return 'Tomorrow';
+  if (s === addDays(t, -1)) return 'Yesterday';
+  return parse(s).toLocaleDateString(undefined, {weekday: 'long'});
+}
+const dateLong = s => parse(s).toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'});
+const dateShort = s => parse(s).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+const vcode = (v, p) => `${p ? p.code : '??'}-${v.date.slice(5, 7)}${v.date.slice(8, 10)}-${v.n || 1}`;
+function autoCode(name) {
+  const w = name.trim().split(/\s+/).filter(Boolean);
+  const c = (w.length > 1 ? w.map(x => x[0]).join('') : (w[0] || 'P').slice(0, 2)).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return c.slice(0, 4) || 'P';
+}
+
+/* ---------- storage: shared db when available, in-memory otherwise ---------- */
+let db = null, unsubDay = null;
+const mem = {products: {}, videos: {}, settings: {}};
+
+async function put(col, id, data) {
+  if (db) return db.doc(col + '/' + id).set(data);
+  mem[col][id] = {...data}; memEmit();
+}
+async function patch(col, id, data) {
+  if (db) return db.doc(col + '/' + id).update(data);
+  Object.assign(mem[col][id], data); memEmit();
+}
+async function remove(col, id) {
+  if (db) return db.doc(col + '/' + id).delete();
+  delete mem[col][id]; memEmit();
+}
+async function guard(fn) {
+  try { await fn(); }
+  catch (e) {
+    S.note = e && e.code === 'quota_exceeded'
+      ? 'Storage is full. Delete some old videos, then try again.'
+      : "That change didn't save. Check your connection and try again.";
+    render();
+  }
+}
+async function nextSeq(date, pid) {
+  let list = [];
+  try {
+    if (db) {
+      const s = await db.collection('videos').where('date', '==', date).where('productId', '==', pid).get();
+      list = s.docs.map(d => d.data());
+    } else list = Object.values(mem.videos).filter(v => v.date === date && v.productId === pid);
+  } catch (e) { list = S.dayVideos.filter(v => v.date === date && v.productId === pid); }
+  return list.reduce((m, v) => Math.max(m, v.n || 0), 0) + 1;
+}
+function memEmit() {
+  const all = Object.entries(mem.videos).map(([id, v]) => ({id, ...v}));
+  S.dayVideos = all.filter(v => v.date === S.date);
+  S.openVideos = all.filter(v => !v.posted);
+  S.products = Object.entries(mem.products).map(([id, p]) => ({id, ...p}));
+  if (mem.settings.main) S.settings = {...S.settings, ...mem.settings.main};
+  S.dayLoaded = true;
+  render();
+}
+const onErr = () => { S.note = 'Lost the connection to your saved list. Reload the page to reconnect.'; render(); };
+function subscribeDay() {
+  S.dayLoaded = false;
+  if (!db) { memEmit(); return; }
+  if (unsubDay) unsubDay();
+  unsubDay = db.collection('videos').where('date', '==', S.date).onSnapshot(s => {
+    S.dayVideos = s.docs.map(d => ({id: d.id, ...d.data()}));
+    S.dayLoaded = true; softRender();
+  }, onErr);
+}
+function subscribeAll() {
+  db.collection('products').onSnapshot(s => {
+    S.products = s.docs.map(d => ({id: d.id, ...d.data()})); softRender();
+  }, onErr);
+  db.collection('videos').where('posted', '==', false).onSnapshot(s => {
+    S.openVideos = s.docs.map(d => ({id: d.id, ...d.data()})); softRender();
+  }, onErr);
+  db.doc('settings/main').onSnapshot(s => {
+    if (s.exists) S.settings = {...S.settings, ...s.data()}; softRender();
+  }, onErr);
+  subscribeDay();
+}
+
+/* Don't redraw under someone who is typing; catch up once they leave the field. */
+let pending = false;
+const typing = () => { const a = document.activeElement; return a && $app.contains(a) && a.closest('form'); };
+function softRender() { if (typing()) { pending = true; return; } render(); }
+document.addEventListener('focusout', () => setTimeout(() => { if (pending && !typing()) render(); }, 0));
+
+/* ---------- views ---------- */
+function render() {
+  pending = false;
+  $app.innerHTML = renderTop() + (S.mode === 'loading'
+    ? '<p class="loading">Loading your run sheet…</p>'
+    : S.tab === 'day' ? renderDay() : renderProducts());
+}
+
+function renderTop() {
+  const sync = S.mode === 'live' ? ['live', 'Synced across your devices']
+    : S.mode === 'local' ? ['local', 'Preview only: open this page in Claude to save']
+    : ['', 'Connecting…'];
+  return `
+  <header class="masthead">
+    <div class="brand"><span class="rec" aria-hidden="true"></span>Daily Run Sheet</div>
+    <span class="sync ${sync[0]}">${sync[1]}</span>
+  </header>
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="${S.tab === 'day'}" data-act="tab" data-tab="day">Daily list</button>
+    <button role="tab" aria-selected="${S.tab === 'products'}" data-act="tab" data-tab="products">Products<span class="n">${S.products.length}</span></button>
+  </nav>
+  ${S.note ? `<div class="note" role="status"><span>${esc(S.note)}</span><button data-act="dismiss">Dismiss</button></div>` : ''}`;
+}
+
+function renderDay() {
+  const t = today();
+  const vids = [...S.dayVideos].sort(byT);
+  const shown = S.products.filter(p => p.status !== 'paused' || vids.some(v => v.productId === p.id)).sort(byOrder);
+  const orphans = vids.filter(v => !prodById(v.productId));
+  const min = +S.settings.minVideos || 3, minNew = +S.settings.minNew || 2;
+  const total = vids.length, posted = vids.filter(v => v.posted).length, made = vids.filter(v => v.made).length;
+  const newPlanned = vids.filter(isNew).length, newPosted = vids.filter(v => isNew(v) && v.posted).length;
+  const carry = S.date === t
+    ? S.openVideos.filter(v => v.date < t).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : byT(a, b)) : [];
+
+  const denom = Math.max(min, total), nDenom = Math.max(minNew, newPlanned);
+  const meter = (label, got, of, target, sub) => `
+    <div class="meter">
+      <div class="mt"><span>${label}</span><b>${got}<i>/${of}</i></b></div>
+      <div class="bar ${got >= target ? 'full' : ''}"><span style="width:${of ? Math.min(100, got / of * 100) : 0}%"></span>${of > target ? `<em style="left:${target / of * 100}%" title="Daily minimum"></em>` : ''}</div>
+      <small>${sub}</small>
+    </div>`;
+
+  let guide, gcls = '';
+  const next = shown.flatMap(p => vids.filter(v => v.productId === p.id && !v.posted)).concat(orphans.filter(v => !v.posted))[0];
+  if (!S.products.length) { guide = 'Start by adding the products you are running.'; gcls = 'warn'; }
+  else if (total < min) { guide = `Plan <b>${min - total} more video${min - total > 1 ? 's' : ''}</b> to reach the daily minimum of ${min}. Load a product's daily lineup or add videos below.`; gcls = 'warn'; }
+  else if (newPlanned < minNew) { guide = `Add <b>${minNew - newPlanned} more new concept or new style</b> to hit the testing target of ${minNew}.`; gcls = 'warn'; }
+  else if (next) { const p = prodById(next.productId); guide = `Next up: <b>${esc(next.concept)}</b>${p ? ' for ' + esc(p.name) : ''}${next.made ? ' (made, ready to post)' : ''}.`; }
+  else { guide = 'Everything on the list is posted. Write down any outliers in the product notes so you can split test them tomorrow.'; gcls = 'ok'; }
+
+  let h = `
+  <div class="datebar">
+    <button class="nav" data-act="date" data-d="-1" aria-label="Previous day">‹</button>
+    <div class="dl"><span class="rel">${dayLabel(S.date)}</span><span class="abs">${dateLong(S.date)}</span></div>
+    ${S.date !== t ? '<button class="link" data-act="today">Back to today</button>' : ''}
+    <button class="nav" data-act="date" data-d="1" aria-label="Next day">›</button>
+  </div>
+  <div class="score">
+    ${meter('Posted', posted, denom, min, `Minimum ${min} a day · ${made} made`)}
+    ${meter('New', newPosted, nDenom, minNew, `Target ${minNew}+ a day · ${newPlanned} planned`)}
+  </div>
+  <p class="guide ${gcls}">${guide}</p>`;
+
+  if (carry.length) {
+    h += `<section class="carry">
+      <div class="ph"><h2>Unfinished from earlier days</h2><button class="btn" data-act="carry-all" ${S.busy ? 'disabled' : ''}>Move all to today</button>
+      <p>These were planned but never posted.</p></div>
+      <ul class="vids">${carry.map(v => row(v, true)).join('')}</ul></section>`;
+  }
+
+  if (!S.dayLoaded) return h + '<p class="loading">Loading this day…</p>';
+
+  if (!S.products.length) {
+    h += `<section class="panel"><div class="panel-h"><h2>No products yet</h2></div>
+      <div class="body"><p style="margin:0 0 12px">Add each product you're running once. After that, every day starts from its lineup.</p>
+      <button class="btn primary" data-act="newprod">Add a product</button></div></section>`;
+  }
+
+  for (const p of shown) {
+    const pv = vids.filter(v => v.productId === p.id);
+    const pp = pv.filter(v => v.posted).length;
+    const lineup = p.lineup || [];
+    h += `<section class="prod" style="--pc:var(--h${(p.color || 0) % 6})">
+      <div class="ph"><span class="dot"></span><h2>${esc(p.name)}</h2><span class="status s-${p.status}">${STATUS[p.status] || ''}</span>
+        <span class="count ${pv.length && pp === pv.length ? 'done' : ''}">${pp}/${pv.length} posted</span></div>
+      ${p.accounts ? `<p class="acct">${esc(p.accounts)}</p>` : ''}
+      ${pv.length ? `<ul class="vids">${pv.map(v => row(v, false)).join('')}</ul>`
+        : `<div class="empty">Nothing planned for ${esc(p.name)} ${S.date === t ? 'today' : 'this day'}.</div>`}
+      ${S.adding === p.id ? videoForm(null, p.id) : `
+      <div class="pfoot">
+        ${lineup.length && !pv.length ? `<button class="btn primary" data-act="lineup" data-pid="${p.id}" ${S.busy ? 'disabled' : ''}>Load daily lineup (${lineup.length})</button>` : ''}
+        <button class="btn ${lineup.length && !pv.length ? '' : 'primary'}" data-act="add" data-pid="${p.id}">+ Add video</button>
+        ${lineup.length && pv.length ? `<button class="btn ghost" data-act="lineup" data-pid="${p.id}" ${S.busy ? 'disabled' : ''}>+ Lineup again (${lineup.length})</button>` : ''}
+      </div>`}
+    </section>`;
+  }
+  if (orphans.length) {
+    h += `<section class="prod" style="--pc:var(--muted)"><div class="ph"><span class="dot"></span><h2>Deleted product</h2></div>
+      <ul class="vids">${orphans.map(v => row(v, false)).join('')}</ul></section>`;
+  }
+  return h;
+}
+
+function row(v, fromEarlier) {
+  if (S.editing === v.id) return `<li style="list-style:none">${videoForm(v, v.productId)}</li>`;
+  const p = prodById(v.productId);
+  const ref = safeUrl(v.ref);
+  const t = today();
+  const moveTo = fromEarlier ? t : addDays(v.date, 1);
+  return `<li class="vid ${v.posted ? 'posted' : ''}" ${p ? `style="--pc:var(--h${(p.color || 0) % 6})"` : ''}>
+    <div class="checks">
+      <label class="ck"><input type="checkbox" id="made-${v.id}" data-act="made" data-id="${v.id}" ${v.made ? 'checked' : ''}>Made</label>
+      <label class="ck"><input type="checkbox" id="posted-${v.id}" data-act="posted" data-id="${v.id}" ${v.posted ? 'checked' : ''}>Posted</label>
+    </div>
+    <div class="vbody">
+      <div class="l1"><strong>${esc(v.concept)}</strong><span class="kind k-${v.kind}">${KIND[v.kind] || ''}</span></div>
+      ${v.notes ? `<p class="vnotes">${esc(v.notes)}</p>` : ''}
+      <div class="vmeta">
+        <span class="vcode" title="Save the finished video under this name">${vcode(v, p)}</span>
+        ${fromEarlier ? `<span class="from">${p ? esc(p.name) + ' · ' : ''}${dateShort(v.date)}</span>` : ''}
+        ${ref ? `<a href="${esc(ref)}" target="_blank" rel="noopener">Reference ↗</a>` : ''}
+        <button data-act="edit" data-id="${v.id}">Edit</button>
+        ${v.posted ? '' : `<button data-act="move" data-id="${v.id}" data-to="${moveTo}">Move to ${fromEarlier ? 'today' : 'next day'}</button>`}
+        <button data-act="del" data-id="${v.id}">Delete</button>
+      </div>
+      ${S.confirm === v.id ? `<div class="confirm">Delete this video from the list?
+        <button class="btn danger" data-act="del-yes" data-id="${v.id}">Delete</button>
+        <button class="btn" data-act="del-no">Keep it</button></div>` : ''}
+    </div>
+  </li>`;
+}
+
+function videoForm(v, pid) {
+  const k = v ? v.id : 'new-' + pid;
+  const kind = v ? v.kind : 'new';
+  return `<form class="card" data-form="video" data-id="${v ? v.id : ''}" data-pid="${pid}">
+    <div class="fgrid">
+      <label class="f wide"><span>Concept</span>
+        <input id="c-${k}" name="concept" list="concepts" required autocomplete="off" placeholder="e.g. 3-2-1 Reveal" value="${esc(v?.concept)}"></label>
+      <label class="f"><span>Type</span>
+        <select id="k-${k}" name="kind">${KINDS.map(([val, lab]) => `<option value="${val}" ${val === kind ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>
+      ${v ? '' : `<label class="f"><span>How many</span>
+        <select id="n-${k}" name="count">${[1,2,3,4,5].map(n => `<option>${n}</option>`).join('')}</select></label>`}
+      <label class="f wide"><span>What to make</span>
+        <textarea id="t-${k}" name="notes" rows="2" placeholder="Hook, clips, on-screen text, audio, which outlier it copies…">${esc(v?.notes)}</textarea></label>
+      <label class="f wide"><span>Reference link (optional)</span>
+        <input id="r-${k}" name="ref" inputmode="url" autocomplete="off" placeholder="Paste the video you're copying" value="${esc(v?.ref)}"></label>
+    </div>
+    <div class="factions">
+      <button type="submit" class="btn primary">${v ? 'Save' : 'Add to ' + dayLabel(S.date).toLowerCase().replace(/^(mon|tue|wed|thu|fri|sat|sun)/, m => m[0].toUpperCase() + m.slice(1))}</button>
+      <button type="button" class="btn" data-act="cancel">Cancel</button>
+    </div>
+  </form>`;
+}
+
+function renderProducts() {
+  const list = [...S.products].sort(byOrder);
+  let h = `<section class="panel">
+    <div class="panel-h"><h2>Products you're running</h2>
+      ${S.editingProduct === 'new' ? '' : '<button class="btn primary" data-act="newprod">+ Add product</button>'}</div>
+    ${S.editingProduct === 'new' ? productForm() : ''}
+    ${!list.length && S.editingProduct !== 'new' ? '<div class="body">No products yet.</div>' : ''}
+    ${list.map(p => S.editingProduct === p.id ? productForm(p) : pcard(p)).join('')}
+  </section>
+  <section class="panel">
+    <div class="panel-h"><h2>Daily targets</h2></div>
+    <form class="targets" data-form="targets">
+      <label class="f"><span>Minimum videos a day</span><input id="t-min" type="number" name="minVideos" min="1" max="50" value="${esc(S.settings.minVideos)}"></label>
+      <label class="f"><span>New concepts / styles a day</span><input id="t-new" type="number" name="minNew" min="0" max="50" value="${esc(S.settings.minNew)}"></label>
+      <div class="factions" style="margin:0"><button type="submit" class="btn">Save targets</button></div>
+    </form>
+  </section>
+  <section class="panel">
+    <div class="panel-h"><h2>How to use it</h2></div>
+    <div class="body"><ol class="steps">
+      <li>Add each product once, with its <b>daily lineup</b>: the videos you want made for it every day.</li>
+      <li>Each morning, open <b>Daily list</b> and tap <b>Load daily lineup</b> on each product. Add any extra concepts, new styles or outlier split tests on top.</li>
+      <li>Tick <b>Made</b> when the video is finished and saved, and <b>Posted</b> when it's live. Anything not posted shows up again the next day.</li>
+      <li>Save each finished video using its code (like <span class="vcode">GC-0925-1</span>: product, date, number), or keep one phone album per product, so your camera roll stays sorted.</li>
+      <li>Paused products drop off the daily list but keep their lineup for when you restart them.</li>
+    </ol></div>
+  </section>`;
+  return h;
+}
+
+function pcard(p) {
+  const link = safeUrl(p.link);
+  return `<article class="pcard" style="--pc:var(--h${(p.color || 0) % 6})">
+    <div class="ph"><span class="dot"></span><h3>${esc(p.name)}</h3><span class="code">${esc(p.code)}</span><span class="status s-${p.status}">${STATUS[p.status] || ''}</span></div>
+    ${p.accounts ? `<p class="pnotes" style="color:var(--muted)">${esc(p.accounts)}</p>` : ''}
+    ${link ? `<a class="plink" href="${esc(link)}" target="_blank" rel="noopener">${esc(link.replace(/^https?:\/\//, ''))} ↗</a>` : ''}
+    ${p.notes ? `<span class="lbl">Notes &amp; outliers</span><p class="pnotes">${esc(p.notes)}</p>` : ''}
+    <span class="lbl">Daily lineup · ${(p.lineup || []).length} video${(p.lineup || []).length === 1 ? '' : 's'}</span>
+    ${(p.lineup || []).length ? `<ol class="lineup">${p.lineup.map(l => `<li>${esc(l.concept)} · ${KIND[l.kind] || ''}${l.notes ? ' — ' + esc(l.notes) : ''}</li>`).join('')}</ol>` : '<p class="pnotes" style="color:var(--muted)">No lineup yet.</p>'}
+    <div class="factions">
+      <button class="btn" data-act="editprod" data-id="${p.id}">Edit</button>
+      <button class="btn" data-act="status" data-id="${p.id}" data-s="${p.status === 'paused' ? 'testing' : 'paused'}">${p.status === 'paused' ? 'Restart' : 'Pause'}</button>
+      <button class="btn" data-act="delprod" data-id="${p.id}">Delete</button>
+    </div>
+    ${S.confirmProduct === p.id ? `<div class="confirm">Delete ${esc(p.name)}? Its lineup and notes are removed. Videos already on the list stay.
+      <button class="btn danger" data-act="delprod-yes" data-id="${p.id}">Delete</button><button class="btn" data-act="delprod-no">Keep it</button></div>` : ''}
+  </article>`;
+}
+
+function productForm(p) {
+  const d = S.draft;
+  const k = p ? p.id : 'new';
+  return `<form class="card" data-form="product" data-id="${p ? p.id : ''}">
+    <div class="fgrid">
+      <label class="f"><span>Product name</span><input id="pn-${k}" name="name" required value="${esc(d.name)}" placeholder="e.g. Grumpy Crawler"></label>
+      <label class="f"><span>Short code</span><input id="pc-${k}" name="code" maxlength="4" value="${esc(d.code)}" placeholder="Auto, e.g. GC"></label>
+      <label class="f"><span>Status</span><select id="ps-${k}" name="status">${Object.entries(STATUS).map(([v, l]) => `<option value="${v}" ${d.status === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="f"><span>Accounts</span><input id="pa-${k}" name="accounts" value="${esc(d.accounts)}" placeholder="@handle TikTok, @handle IG"></label>
+      <label class="f wide"><span>Store link (optional)</span><input id="pl-${k}" name="link" inputmode="url" value="${esc(d.link)}" placeholder="https://"></label>
+      <label class="f wide"><span>Notes &amp; outliers</span><textarea id="pt-${k}" name="notes" rows="3" placeholder="What's working, outliers to split test, avatar, audio…">${esc(d.notes)}</textarea></label>
+      <div class="f wide"><span>Daily lineup: videos to make every day</span>
+        <div class="lu-list">${d.lineup.map((l, i) => `<div class="lu lu-row">
+          <input id="lc-${k}-${i}" name="lc" list="concepts" placeholder="Concept" value="${esc(l.concept)}" aria-label="Concept">
+          <select id="lk-${k}-${i}" name="lk" aria-label="Type">${KINDS.map(([v, lab]) => `<option value="${v}" ${l.kind === v ? 'selected' : ''}>${lab}</option>`).join('')}</select>
+          <input id="ln-${k}-${i}" class="lu-notes" name="ln" placeholder="Details (optional)" value="${esc(l.notes)}" aria-label="Details">
+          <button type="button" data-act="lu-rm" data-i="${i}" aria-label="Remove line">×</button>
+        </div>`).join('')}</div>
+        <div><button type="button" class="btn ghost" data-act="lu-add" style="margin-top:6px">+ Add lineup video</button></div>
+      </div>
+    </div>
+    <div class="factions">
+      <button type="submit" class="btn primary">${p ? 'Save product' : 'Add product'}</button>
+      <button type="button" class="btn" data-act="cancelprod">Cancel</button>
+    </div>
+  </form>`;
+}
+
+function readDraft(form) {
+  const fd = new FormData(form);
+  const lc = fd.getAll('lc'), lk = fd.getAll('lk'), ln = fd.getAll('ln');
+  return {
+    name: (fd.get('name') || '').trim(), code: (fd.get('code') || '').trim(),
+    status: fd.get('status') || 'testing', accounts: (fd.get('accounts') || '').trim(),
+    link: (fd.get('link') || '').trim(), notes: (fd.get('notes') || '').trim(),
+    lineup: lc.map((c, i) => ({concept: c.trim(), kind: lk[i] || 'new', notes: (ln[i] || '').trim()}))
+  };
+}
+
+/* ---------- actions ---------- */
+function setDate(d) {
+  S.date = d; S.adding = S.editing = S.confirm = null; S.dayVideos = [];
+  subscribeDay(); render(); window.scrollTo(0, 0);
+}
+async function addVideos(pid, items) {
+  S.busy = true; render();
+  const n = await nextSeq(S.date, pid);
+  for (let i = 0; i < items.length; i++) {
+    await guard(() => put('videos', uid(), {
+      concept: items[i].concept, kind: items[i].kind || 'new', notes: items[i].notes || '', ref: items[i].ref || '',
+      productId: pid, date: S.date, made: false, posted: false, n: n + i, t: Date.now() + i
+    }));
+  }
+  S.busy = false; render();
+}
+async function moveVideo(v, to) {
+  const n = await nextSeq(to, v.productId);
+  await guard(() => patch('videos', v.id, {date: to, n, t: Date.now()}));
+}
+
+$app.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.tagName === 'INPUT') return;
+  const a = b.dataset.act, id = b.dataset.id;
+  switch (a) {
+    case 'tab': S.tab = b.dataset.tab; render(); break;
+    case 'dismiss': S.note = ''; render(); break;
+    case 'date': setDate(addDays(S.date, +b.dataset.d)); break;
+    case 'today': setDate(today()); break;
+    case 'add': S.adding = b.dataset.pid; S.editing = null; render(); document.getElementById('c-new-' + b.dataset.pid)?.focus(); break;
+    case 'cancel': S.adding = S.editing = null; render(); break;
+    case 'edit': S.editing = id; S.adding = null; render(); break;
+    case 'del': S.confirm = id; render(); break;
+    case 'del-no': S.confirm = null; render(); break;
+    case 'del-yes': S.confirm = null; await guard(() => remove('videos', id)); break;
+    case 'move': { const v = findVideo(id); if (v) await moveVideo(v, b.dataset.to); break; }
+    case 'carry-all': {
+      S.busy = true; render();
+      const t = today();
+      for (const v of S.openVideos.filter(v => v.date < t)) await moveVideo(v, t);
+      S.busy = false; render(); break;
+    }
+    case 'lineup': { const p = prodById(b.dataset.pid); if (p && !S.busy) await addVideos(p.id, p.lineup || []); break; }
+    case 'newprod':
+      S.tab = 'products'; S.editingProduct = 'new';
+      S.draft = {name: '', code: '', status: 'testing', accounts: '', link: '', notes: '', lineup: [
+        {concept: '3-2-1 Reveal', kind: 'split', notes: ''},
+        {concept: 'Discovery / Surprise Store', kind: 'style', notes: ''},
+        {concept: '', kind: 'new', notes: ''}]};
+      render(); document.getElementById('pn-new')?.focus(); break;
+    case 'editprod': { const p = prodById(id); S.editingProduct = id;
+      S.draft = {...p, lineup: (p.lineup || []).map(l => ({...l}))};
+      if (!S.draft.lineup.length) S.draft.lineup.push({concept: '', kind: 'new', notes: ''});
+      render(); break; }
+    case 'cancelprod': S.editingProduct = null; S.draft = null; render(); break;
+    case 'lu-add': S.draft = {...S.draft, ...readDraft(b.closest('form'))}; S.draft.lineup.push({concept: '', kind: 'new', notes: ''}); render(); break;
+    case 'lu-rm': S.draft = {...S.draft, ...readDraft(b.closest('form'))}; S.draft.lineup.splice(+b.dataset.i, 1); render(); break;
+    case 'status': await guard(() => patch('products', id, {status: b.dataset.s})); break;
+    case 'delprod': S.confirmProduct = id; render(); break;
+    case 'delprod-no': S.confirmProduct = null; render(); break;
+    case 'delprod-yes': S.confirmProduct = null; await guard(() => remove('products', id)); break;
+  }
+});
+
+$app.addEventListener('change', e => {
+  const el = e.target, a = el.dataset.act;
+  if (a !== 'made' && a !== 'posted') return;
+  const on = el.checked;
+  const upd = a === 'posted' ? (on ? {posted: true, made: true} : {posted: false}) : (on ? {made: true} : {made: false, posted: false});
+  guard(() => patch('videos', el.dataset.id, upd));
+});
+
+$app.addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target, fd = new FormData(f);
+  if (f.dataset.form === 'video') {
+    const base = {concept: (fd.get('concept') || '').trim(), kind: fd.get('kind'), notes: (fd.get('notes') || '').trim(), ref: (fd.get('ref') || '').trim()};
+    if (!base.concept) return;
+    if (f.dataset.id) { S.editing = null; render(); await guard(() => patch('videos', f.dataset.id, base)); }
+    else { S.adding = null; await addVideos(f.dataset.pid, Array.from({length: +fd.get('count') || 1}, () => base)); }
+  } else if (f.dataset.form === 'product') {
+    const d = readDraft(f);
+    if (!d.name) return;
+    const body = {...d, code: (d.code || autoCode(d.name)).toUpperCase(), lineup: d.lineup.filter(l => l.concept)};
+    const id = f.dataset.id;
+    S.editingProduct = null; S.draft = null; render();
+    if (id) await guard(() => patch('products', id, body));
+    else await guard(() => put('products', uid(), {...body, color: S.products.length % 6, order: Date.now()}));
+  } else if (f.dataset.form === 'targets') {
+    const body = {minVideos: Math.max(1, +fd.get('minVideos') || 3), minNew: Math.max(0, +fd.get('minNew') || 0)};
+    await guard(() => put('settings', 'main', body));
+    S.settings = {...S.settings, ...body}; S.note = ''; render();
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  const t = today();
+  if (t !== S.lastToday) { const follow = S.date === S.lastToday; S.lastToday = t; if (follow) setDate(t); else render(); }
+});
+
+/* ---------- start ---------- */
+S.date = S.lastToday = today();
+(async () => {
+  try { db = window.claude && typeof window.claude.use === 'function' ? await window.claude.use('db') : null; }
+  catch (e) { db = null; }
+  if (db) { S.mode = 'live'; render(); subscribeAll(); return; }
+  S.mode = 'local';
+  const t = S.date, pid = 'example';
+  mem.products[pid] = {name: 'Example product', code: 'EX', status: 'testing', accounts: '@example.shop TikTok', link: '', notes: 'Preview data. Open this page in Claude to use your real list.', color: 0, order: 1,
+    lineup: [{concept: '3-2-1 Reveal', kind: 'split', notes: ''}, {concept: 'Discovery / Surprise Store', kind: 'style', notes: ''}, {concept: 'Gifting / Gift Reaction', kind: 'new', notes: ''}]};
+  [['3-2-1 Reveal', 'split', 'Copy the outlier: same hook, new audio', true, true],
+   ['Discovery / Surprise Store', 'style', 'Night-time store walk version', true, false],
+   ['Gifting / Gift Reaction', 'new', 'Partner opens it on the couch', false, false]]
+    .forEach(([concept, kind, notes, made, posted], i) => { mem.videos['ex' + i] = {concept, kind, notes, ref: '', productId: pid, date: t, made, posted, n: i + 1, t: i}; });
+  memEmit();
+})();
+</script>
