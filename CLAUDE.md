@@ -26,6 +26,7 @@ They are the creative director. Claude plans each day's list, writes prompts, an
 - At least 2 new concepts or new styles across the day. The rest are split tests of outliers.
 - Prioritize Facebook and Instagram outliers. Double down on what works: styles of the winning concept, visual hooks, text hooks, sounds.
 - A split test changes ONE variable (visual hook, text hook or sound). Before adding one, check which variables that outlier has already had split tested (videos with that `outlierId` and `variable`). Never repeat a tested variable unless it's a brand-new version.
-- Put the source post link in `ref` whenever there is one. Be specific in `notes`: hook, clips, on-screen text, sound.
+- Every video gets a source post in `ref`: the exact video being swiped. It must be a proven viral one (high views), never a random low-view example. It can come from any product or niche, Christmas or not; what matters is that the concept went viral. Write its view count in `notes`.
+- Be specific in `notes`: hook, clips, on-screen text, sound.
 - Low views on a video are just data. Never call the account dead. Keep volume and quality up.
 - Posting time barely matters. The app shows a post order that alternates products on the shared account.

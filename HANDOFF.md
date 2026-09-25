@@ -15,7 +15,7 @@ That session ran in the cloud and couldn't open my accounts. You're running with
 3. **Update the app:**
    - Add the real outliers with links and views to each product.
    - Rewrite today's list: 3 videos per product (2 minimum, 4+ is extra), at least 2 new concepts or new styles in total, and the rest split tests of outliers that change ONE thing.
-   - Put the source post link on every video you can.
+   - Give every video a source post: the exact viral video we're swiping (any product or niche, as long as it went viral, never a random low-view one), with its view count.
 4. **Tweak the app** if the real data shows something it should track better. Keep it dead simple (KISS). It has to be easy to follow on my phone.
 
 What I know so far:
