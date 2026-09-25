@@ -8,7 +8,11 @@ A daily posting checklist for every product we're running.
 ## How it's organized
 - **Products tab:** one entry per product: name, short code, status (Testing / Scaling / Paused), accounts, notes and outliers, and a **daily lineup** (the videos to make for it every day).
 - **Daily list tab:** each active product with that day's videos. Every video has **Made** and **Posted** checkboxes, a type (New concept / New style / Split test / Repost), notes, an optional reference link, and a file code like `GC-0925-1` for naming it in the camera roll.
-- **Targets:** at least 3 videos a day and 2 new concepts or styles a day (you can change both). Videos that were never posted show up again the next day.
+- **Targets:** 3 videos per product a day (standard), 2 minimum, plus 2+ new concepts or styles a day. Videos that were never posted show up again the next day.
+- **Outliers:** each product lists its outliers and which variables (visual hook, text hook, sound) have already been split tested, so no test gets repeated.
+- **Source post:** every video can link to the post it recreates.
+
+See `CLAUDE.md` for the daily rules and data layout Claude follows.
 
 ## Updating it
 - From the page itself: add products, lineups and videos directly.

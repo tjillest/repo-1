@@ -158,7 +158,35 @@ form.card{padding:14px;border-top:1px solid var(--line);background:var(--sunk)}
 .targets{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;padding:0 14px 14px}
 .loading{padding:40px 0;text-align:center;color:var(--muted)}
 
+.src{display:inline-flex;align-items:center;gap:5px;background:var(--ink);color:var(--bg)!important;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none}
+.split-of{margin:4px 0 0;font-size:13px;color:var(--warn);font-weight:500;overflow-wrap:anywhere}
+.split-of b{font-weight:600}
+.views{width:92px;border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:3px 7px;font-size:13px;font-family:var(--mono)}
+.star{border:1px solid var(--line)!important;border-radius:6px;padding:2px 8px!important}
+.star.on{background:var(--warn-soft);border-color:var(--warn)!important;color:var(--warn)!important;font-weight:600}
+.outs{padding:2px 14px 10px;display:flex;flex-direction:column;gap:8px}
+.out{background:var(--sunk);border-radius:9px;padding:8px 10px;font-size:13px}
+.out-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.out-h b{font-weight:600}
+.out-h .v{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.out-h a{color:var(--accent);font-weight:600;text-decoration:none;margin-left:auto}
+.vars{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.var{font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px;border:1px dashed var(--line);color:var(--muted)}
+.var.t{border:1px solid transparent;background:var(--done-soft);color:var(--done)}
+.out-n{margin:4px 0 0;color:var(--muted);white-space:pre-wrap}
+.order{margin-top:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.order .vcode{border-left:3px solid var(--pc)}
+.hint{font-size:12px;color:var(--muted);margin-top:2px}
+.ol-row{display:grid;grid-template-columns:1.4fr 1.4fr .7fr auto;gap:6px;align-items:center}
+.ol-row input{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px;font-size:15px;min-width:0}
+.ol-row button{border:0;background:none;color:var(--muted);font-size:18px;width:32px;height:36px}
+.ol-row .ol-notes{grid-column:1/-2}
+
 @media (max-width:520px){
+  .ol-row{grid-template-columns:1fr 1fr auto}
+  .ol-row .ol-link{grid-column:1/-2;grid-row:2}
+  .ol-row .ol-notes{grid-column:1/-2}
+  .ol-row{padding-bottom:8px;border-bottom:1px dashed var(--line)}
   .fgrid,.targets{grid-template-columns:1fr}
   .lu{grid-template-columns:1fr 1fr auto;}
   .lu .lu-notes{grid-column:1/-1;grid-row:2}
@@ -200,12 +228,14 @@ const $app = document.getElementById('app');
 const KINDS = [['new','New concept'],['style','New style'],['split','Split test'],['repost','Repost']];
 const KIND = Object.fromEntries(KINDS);
 const STATUS = {testing:'Testing', scaling:'Scaling', paused:'Paused'};
+const VARS = [['visual','Visual hook'],['text','Text hook'],['sound','Sound'],['other','Other']];
+const VAR = Object.fromEntries(VARS);
 
 const S = {
   tab: location.hash === '#products' ? 'products' : 'day',
   date: '', lastToday: '',
-  products: [], dayVideos: [], openVideos: [],
-  settings: {minVideos: 3, minNew: 2},
+  products: [], dayVideos: [], openVideos: [], splitVideos: [],
+  settings: {perProduct: 3, minPerProduct: 2, minNew: 2},
   mode: 'loading', dayLoaded: false,
   adding: null, editing: null, confirm: null,
   editingProduct: null, draft: null, confirmProduct: null,
@@ -225,6 +255,17 @@ const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
 const prodById = id => S.products.find(p => p.id === id);
 const findVideo = id => S.dayVideos.find(v => v.id === id) || S.openVideos.find(v => v.id === id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const outliersOf = p => (p && p.outliers) || [];
+function testedCounts(oid) {
+  const c = {};
+  for (const v of S.splitVideos) if (v.outlierId === oid && v.variable) c[v.variable] = (c[v.variable] || 0) + 1;
+  return c;
+}
+const varChips = oid => { const c = testedCounts(oid); return VARS.map(([k, l]) => c[k] ? `<span class="var t">${l} ✓${c[k] > 1 ? ' ×' + c[k] : ''}</span>` : `<span class="var">${l}: not tested</span>`).join(''); };
+function testedHint(oid) {
+  const c = testedCounts(oid), done = VARS.filter(([k]) => c[k]).map(([k, l]) => l + (c[k] > 1 ? ' ×' + c[k] : ''));
+  return oid ? (done.length ? 'Already split tested: ' + done.join(', ') + '. Pick something not tested yet, or a brand-new version.' : 'Nothing split tested on this outlier yet.') : '';
+}
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
 function dayLabel(s) {
   const t = today();
@@ -281,6 +322,7 @@ function memEmit() {
   const all = Object.entries(mem.videos).map(([id, v]) => ({id, ...v}));
   S.dayVideos = all.filter(v => v.date === S.date);
   S.openVideos = all.filter(v => !v.posted);
+  S.splitVideos = all.filter(v => v.kind === 'split');
   S.products = Object.entries(mem.products).map(([id, p]) => ({id, ...p}));
   if (mem.settings.main) S.settings = {...S.settings, ...mem.settings.main};
   S.dayLoaded = true;
@@ -303,6 +345,9 @@ function subscribeAll() {
   db.collection('videos').where('posted', '==', false).onSnapshot(s => {
     S.openVideos = s.docs.map(d => ({id: d.id, ...d.data()})); softRender();
   }, onErr);
+  db.collection('videos').where('kind', '==', 'split').onSnapshot(s => {
+    S.splitVideos = s.docs.map(d => ({id: d.id, ...d.data()})); softRender();
+  }, onErr);
   db.doc('settings/main').onSnapshot(s => {
     if (s.exists) S.settings = {...S.settings, ...s.data()}; softRender();
   }, onErr);
@@ -311,7 +356,7 @@ function subscribeAll() {
 
 /* Don't redraw under someone who is typing; catch up once they leave the field. */
 let pending = false;
-const typing = () => { const a = document.activeElement; return a && $app.contains(a) && a.closest('form'); };
+const typing = () => { const a = document.activeElement; return a && $app.contains(a) && a.matches('input:not([type=checkbox]),textarea,select'); };
 function softRender() { if (typing()) { pending = true; return; } render(); }
 document.addEventListener('focusout', () => setTimeout(() => { if (pending && !typing()) render(); }, 0));
 
@@ -344,28 +389,37 @@ function renderDay() {
   const vids = [...S.dayVideos].sort(byT);
   const shown = S.products.filter(p => p.status !== 'paused' || vids.some(v => v.productId === p.id)).sort(byOrder);
   const orphans = vids.filter(v => !prodById(v.productId));
-  const min = +S.settings.minVideos || 3, minNew = +S.settings.minNew || 2;
+  const std = +S.settings.perProduct || 3, minP = +S.settings.minPerProduct || 2, minNew = +S.settings.minNew || 2;
+  const activeN = S.products.filter(p => p.status !== 'paused').length;
+  const stdTotal = std * activeN;
   const total = vids.length, posted = vids.filter(v => v.posted).length, made = vids.filter(v => v.made).length;
   const newPlanned = vids.filter(isNew).length, newPosted = vids.filter(v => isNew(v) && v.posted).length;
   const carry = S.date === t
     ? S.openVideos.filter(v => v.date < t).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : byT(a, b)) : [];
 
-  const denom = Math.max(min, total), nDenom = Math.max(minNew, newPlanned);
+  const denom = Math.max(stdTotal, total), nDenom = Math.max(minNew, newPlanned);
   const meter = (label, got, of, target, sub) => `
     <div class="meter">
       <div class="mt"><span>${label}</span><b>${got}<i>/${of}</i></b></div>
-      <div class="bar ${got >= target ? 'full' : ''}"><span style="width:${of ? Math.min(100, got / of * 100) : 0}%"></span>${of > target ? `<em style="left:${target / of * 100}%" title="Daily minimum"></em>` : ''}</div>
+      <div class="bar ${target && got >= target ? 'full' : ''}"><span style="width:${of ? Math.min(100, got / of * 100) : 0}%"></span>${of > target && target ? `<em style="left:${target / of * 100}%" title="Standard"></em>` : ''}</div>
       <small>${sub}</small>
     </div>`;
 
+  // Guidance: the one thing to do next.
   let guide, gcls = '';
-  const next = shown.flatMap(p => vids.filter(v => v.productId === p.id && !v.posted)).concat(orphans.filter(v => !v.posted))[0];
+  const active = shown.filter(p => p.status !== 'paused');
+  const cnt = p => vids.filter(v => v.productId === p.id).length;
+  const underMin = active.find(p => cnt(p) < minP);
+  const underStd = active.find(p => cnt(p) < std);
+  const next = orderQueue(shown, vids)[0];
   if (!S.products.length) { guide = 'Start by adding the products you are running.'; gcls = 'warn'; }
-  else if (total < min) { guide = `Plan <b>${min - total} more video${min - total > 1 ? 's' : ''}</b> to reach the daily minimum of ${min}. Load a product's daily lineup or add videos below.`; gcls = 'warn'; }
-  else if (newPlanned < minNew) { guide = `Add <b>${minNew - newPlanned} more new concept or new style</b> to hit the testing target of ${minNew}.`; gcls = 'warn'; }
+  else if (underMin) { guide = `<b>${esc(underMin.name)}</b> has ${cnt(underMin)} planned. The bare minimum is ${minP} a product and the standard is ${std}.`; gcls = 'warn'; }
+  else if (underStd) { guide = `Plan <b>${std - cnt(underStd)} more</b> for ${esc(underStd.name)} to hit the standard of ${std}.`; gcls = 'warn'; }
+  else if (newPlanned < minNew) { guide = `Add <b>${minNew - newPlanned} more new concept or new style</b>. Target is ${minNew}+ a day.`; gcls = 'warn'; }
   else if (next) { const p = prodById(next.productId); guide = `Next up: <b>${esc(next.concept)}</b>${p ? ' for ' + esc(p.name) : ''}${next.made ? ' (made, ready to post)' : ''}.`; }
-  else { guide = 'Everything on the list is posted. Write down any outliers in the product notes so you can split test them tomorrow.'; gcls = 'ok'; }
+  else { guide = 'Everything is posted. Type in the views on today\'s videos and star any outlier so tomorrow\'s split tests build on it.'; gcls = 'ok'; }
 
+  const queue = orderQueue(shown, vids);
   let h = `
   <div class="datebar">
     <button class="nav" data-act="date" data-d="-1" aria-label="Previous day">‹</button>
@@ -374,10 +428,11 @@ function renderDay() {
     <button class="nav" data-act="date" data-d="1" aria-label="Next day">›</button>
   </div>
   <div class="score">
-    ${meter('Posted', posted, denom, min, `Minimum ${min} a day · ${made} made`)}
-    ${meter('New', newPosted, nDenom, minNew, `Target ${minNew}+ a day · ${newPlanned} planned`)}
+    ${meter('Posted', posted, denom, stdTotal, `${std} per product · min ${minP} · ${made} made`)}
+    ${meter('New', newPosted, nDenom, minNew, `New concepts + styles · ${newPlanned} planned`)}
   </div>
-  <p class="guide ${gcls}">${guide}</p>`;
+  <p class="guide ${gcls}">${guide}</p>
+  ${queue.length > 1 && active.length > 1 ? `<div class="order"><span>Post order:</span>${queue.map(v => { const p = prodById(v.productId); return `<span class="vcode" style="--pc:var(--h${((p && p.color) || 0) % 6})">${vcode(v, p)}</span>`; }).join('<span aria-hidden="true">→</span>')}</div>` : ''}`;
 
   if (carry.length) {
     h += `<section class="carry">
@@ -398,10 +453,12 @@ function renderDay() {
     const pv = vids.filter(v => v.productId === p.id);
     const pp = pv.filter(v => v.posted).length;
     const lineup = p.lineup || [];
+    const outs = outliersOf(p);
     h += `<section class="prod" style="--pc:var(--h${(p.color || 0) % 6})">
       <div class="ph"><span class="dot"></span><h2>${esc(p.name)}</h2><span class="status s-${p.status}">${STATUS[p.status] || ''}</span>
-        <span class="count ${pv.length && pp === pv.length ? 'done' : ''}">${pp}/${pv.length} posted</span></div>
+        <span class="count ${pp >= std ? 'done' : ''}">${pp}/${Math.max(std, pv.length)} posted</span></div>
       ${p.accounts ? `<p class="acct">${esc(p.accounts)}</p>` : ''}
+      ${outs.length ? `<div class="outs">${outs.map(o => outlierCard(o)).join('')}</div>` : ''}
       ${pv.length ? `<ul class="vids">${pv.map(v => row(v, false)).join('')}</ul>`
         : `<div class="empty">Nothing planned for ${esc(p.name)} ${S.date === t ? 'today' : 'this day'}.</div>`}
       ${S.adding === p.id ? videoForm(null, p.id) : `
@@ -419,24 +476,47 @@ function renderDay() {
   return h;
 }
 
+/* Unposted videos, alternating products, so one account never posts the same product back to back. */
+function orderQueue(shown, vids) {
+  const lanes = shown.map(p => vids.filter(v => v.productId === p.id && !v.posted));
+  const out = [];
+  for (let i = 0; lanes.some(l => l[i]); i++) lanes.forEach(l => l[i] && out.push(l[i]));
+  return out;
+}
+
+function outlierCard(o) {
+  const link = safeUrl(o.link);
+  return `<div class="out">
+    <div class="out-h"><span aria-hidden="true">★</span><b>${esc(o.label)}</b>${o.views ? `<span class="v">${esc(o.views)} views</span>` : ''}
+      ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener">Open ↗</a>` : ''}</div>
+    ${o.notes ? `<p class="out-n">${esc(o.notes)}</p>` : ''}
+    <div class="vars">${varChips(o.id)}</div>
+  </div>`;
+}
+
 function row(v, fromEarlier) {
   if (S.editing === v.id) return `<li style="list-style:none">${videoForm(v, v.productId)}</li>`;
   const p = prodById(v.productId);
   const ref = safeUrl(v.ref);
   const t = today();
   const moveTo = fromEarlier ? t : addDays(v.date, 1);
-  return `<li class="vid ${v.posted ? 'posted' : ''}" ${p ? `style="--pc:var(--h${(p.color || 0) % 6})"` : ''}>
+  const out = v.kind === 'split' ? outliersOf(p).find(o => o.id === v.outlierId) : null;
+  const starred = outliersOf(p).some(o => o.videoId === v.id);
+  return `<li class="vid ${v.posted ? 'posted' : ''}">
     <div class="checks">
       <label class="ck"><input type="checkbox" id="made-${v.id}" data-act="made" data-id="${v.id}" ${v.made ? 'checked' : ''}>Made</label>
       <label class="ck"><input type="checkbox" id="posted-${v.id}" data-act="posted" data-id="${v.id}" ${v.posted ? 'checked' : ''}>Posted</label>
     </div>
     <div class="vbody">
       <div class="l1"><strong>${esc(v.concept)}</strong><span class="kind k-${v.kind}">${KIND[v.kind] || ''}</span></div>
+      ${v.kind === 'split' && (out || v.variable) ? `<p class="split-of">${out ? `Split test of <b>${esc(out.label)}</b>` : 'Split test'}${v.variable ? ` · new <b>${VAR[v.variable]}</b>` : ''}${v.change ? ': ' + esc(v.change) : ''}</p>` : ''}
       ${v.notes ? `<p class="vnotes">${esc(v.notes)}</p>` : ''}
       <div class="vmeta">
+        ${ref ? `<a class="src" href="${esc(ref)}" target="_blank" rel="noopener">▶ Source post</a>` : ''}
         <span class="vcode" title="Save the finished video under this name">${vcode(v, p)}</span>
         ${fromEarlier ? `<span class="from">${p ? esc(p.name) + ' · ' : ''}${dateShort(v.date)}</span>` : ''}
-        ${ref ? `<a href="${esc(ref)}" target="_blank" rel="noopener">Reference ↗</a>` : ''}
+        ${v.posted ? `<input class="views" id="views-${v.id}" type="number" inputmode="numeric" min="0" placeholder="Views" aria-label="Views" data-act="views" data-id="${v.id}" value="${esc(v.views)}">
+          ${p ? `<button class="star ${starred ? 'on' : ''}" data-act="${starred ? 'noop' : 'star'}" data-id="${v.id}">${starred ? '★ Outlier' : '☆ Mark outlier'}</button>` : ''}` : ''}
         <button data-act="edit" data-id="${v.id}">Edit</button>
         ${v.posted ? '' : `<button data-act="move" data-id="${v.id}" data-to="${moveTo}">Move to ${fromEarlier ? 'today' : 'next day'}</button>`}
         <button data-act="del" data-id="${v.id}">Delete</button>
@@ -451,21 +531,31 @@ function row(v, fromEarlier) {
 function videoForm(v, pid) {
   const k = v ? v.id : 'new-' + pid;
   const kind = v ? v.kind : 'new';
+  const outs = outliersOf(prodById(pid));
+  const oid = v ? v.outlierId || '' : (outs[0] ? outs[0].id : '');
+  const dl = dayLabel(S.date);
   return `<form class="card" data-form="video" data-id="${v ? v.id : ''}" data-pid="${pid}">
     <div class="fgrid">
       <label class="f wide"><span>Concept</span>
-        <input id="c-${k}" name="concept" list="concepts" required autocomplete="off" placeholder="e.g. 3-2-1 Reveal" value="${esc(v?.concept)}"></label>
+        <input id="c-${k}" name="concept" list="concepts" required autocomplete="off" placeholder="e.g. Gifting / Gift Reaction" value="${esc(v?.concept)}"></label>
       <label class="f"><span>Type</span>
         <select id="k-${k}" name="kind">${KINDS.map(([val, lab]) => `<option value="${val}" ${val === kind ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>
       ${v ? '' : `<label class="f"><span>How many</span>
-        <select id="n-${k}" name="count">${[1,2,3,4,5].map(n => `<option>${n}</option>`).join('')}</select></label>`}
+        <select id="n-${k}" name="count">${[1,2,3,4,5,6].map(n => `<option>${n}</option>`).join('')}</select></label>`}
+      <label class="f wide split-only" ${kind === 'split' ? '' : 'hidden'}><span>Outlier you're split testing</span>
+        <select id="o-${k}" name="outlierId"><option value="">None / not listed</option>${outs.map(o => `<option value="${o.id}" ${o.id === oid ? 'selected' : ''}>${esc(o.label)}${o.views ? ' · ' + esc(o.views) : ''}</option>`).join('')}</select>
+        <span class="hint tested-hint">${esc(testedHint(oid))}</span></label>
+      <label class="f split-only" ${kind === 'split' ? '' : 'hidden'}><span>What changes</span>
+        <select id="va-${k}" name="variable">${VARS.map(([val, lab]) => `<option value="${val}" ${v && v.variable === val ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>
+      <label class="f split-only" ${kind === 'split' ? '' : 'hidden'}><span>The new version</span>
+        <input id="ch-${k}" name="change" autocomplete="off" placeholder="New hook text, sound name…" value="${esc(v?.change)}"></label>
       <label class="f wide"><span>What to make</span>
-        <textarea id="t-${k}" name="notes" rows="2" placeholder="Hook, clips, on-screen text, audio, which outlier it copies…">${esc(v?.notes)}</textarea></label>
-      <label class="f wide"><span>Reference link (optional)</span>
-        <input id="r-${k}" name="ref" inputmode="url" autocomplete="off" placeholder="Paste the video you're copying" value="${esc(v?.ref)}"></label>
+        <textarea id="t-${k}" name="notes" rows="2" placeholder="Hook, clips, on-screen text, audio…">${esc(v?.notes)}</textarea></label>
+      <label class="f wide"><span>Source post link</span>
+        <input id="r-${k}" name="ref" inputmode="url" autocomplete="off" placeholder="Paste the video you're recreating" value="${esc(v?.ref)}"></label>
     </div>
     <div class="factions">
-      <button type="submit" class="btn primary">${v ? 'Save' : 'Add to ' + dayLabel(S.date).toLowerCase().replace(/^(mon|tue|wed|thu|fri|sat|sun)/, m => m[0].toUpperCase() + m.slice(1))}</button>
+      <button type="submit" class="btn primary">${v ? 'Save' : 'Add to ' + (dl === 'Today' || dl === 'Tomorrow' || dl === 'Yesterday' ? dl.toLowerCase() : dl)}</button>
       <button type="button" class="btn" data-act="cancel">Cancel</button>
     </div>
   </form>`;
@@ -473,7 +563,7 @@ function videoForm(v, pid) {
 
 function renderProducts() {
   const list = [...S.products].sort(byOrder);
-  let h = `<section class="panel">
+  return `<section class="panel">
     <div class="panel-h"><h2>Products you're running</h2>
       ${S.editingProduct === 'new' ? '' : '<button class="btn primary" data-act="newprod">+ Add product</button>'}</div>
     ${S.editingProduct === 'new' ? productForm() : ''}
@@ -482,32 +572,36 @@ function renderProducts() {
   </section>
   <section class="panel">
     <div class="panel-h"><h2>Daily targets</h2></div>
-    <form class="targets" data-form="targets">
-      <label class="f"><span>Minimum videos a day</span><input id="t-min" type="number" name="minVideos" min="1" max="50" value="${esc(S.settings.minVideos)}"></label>
-      <label class="f"><span>New concepts / styles a day</span><input id="t-new" type="number" name="minNew" min="0" max="50" value="${esc(S.settings.minNew)}"></label>
+    <form class="targets" data-form="targets" style="grid-template-columns:1fr 1fr 1fr">
+      <label class="f"><span>Standard per product</span><input id="t-std" type="number" name="perProduct" min="1" max="20" value="${esc(S.settings.perProduct)}"></label>
+      <label class="f"><span>Bare minimum</span><input id="t-min" type="number" name="minPerProduct" min="1" max="20" value="${esc(S.settings.minPerProduct)}"></label>
+      <label class="f"><span>New a day</span><input id="t-new" type="number" name="minNew" min="0" max="50" value="${esc(S.settings.minNew)}"></label>
       <div class="factions" style="margin:0"><button type="submit" class="btn">Save targets</button></div>
     </form>
   </section>
   <section class="panel">
-    <div class="panel-h"><h2>How to use it</h2></div>
+    <div class="panel-h"><h2>The daily loop</h2></div>
     <div class="body"><ol class="steps">
-      <li>Add each product once, with its <b>daily lineup</b>: the videos you want made for it every day.</li>
-      <li>Each morning, open <b>Daily list</b> and tap <b>Load daily lineup</b> on each product. Add any extra concepts, new styles or outlier split tests on top.</li>
-      <li>Tick <b>Made</b> when the video is finished and saved, and <b>Posted</b> when it's live. Anything not posted shows up again the next day.</li>
-      <li>Save each finished video using its code (like <span class="vcode">GC-0925-1</span>: product, date, number), or keep one phone album per product, so your camera roll stays sorted.</li>
-      <li>Paused products drop off the daily list but keep their lineup for when you restart them.</li>
+      <li>Open <b>Daily list</b>. Make the videos from top to bottom. Tap <b>▶ Source post</b> to see exactly what you're recreating.</li>
+      <li>Tick <b>Made</b> when it's edited and saved to your phone. Tick <b>Posted</b> when it's live. Post in the <b>Post order</b> shown so the two products alternate on the account.</li>
+      <li>Standard is ${esc(S.settings.perProduct)} videos per product a day. ${esc(S.settings.minPerProduct)} is the bare minimum. Anything more is extra volume.</li>
+      <li>Later, type the views into posted videos and tap <b>☆ Mark outlier</b> on any that pop. Each outlier shows which parts have already been split tested (visual hook, text hook, sound), so no split test gets repeated.</li>
+      <li>Save finished videos under their code (<span class="vcode">HP-0925-1</span>) or in one phone album per product.</li>
+      <li>Send Claude your top posts (links + views, or screenshots) and it will write tomorrow's list here.</li>
     </ol></div>
   </section>`;
-  return h;
 }
 
 function pcard(p) {
   const link = safeUrl(p.link);
+  const outs = outliersOf(p);
   return `<article class="pcard" style="--pc:var(--h${(p.color || 0) % 6})">
     <div class="ph"><span class="dot"></span><h3>${esc(p.name)}</h3><span class="code">${esc(p.code)}</span><span class="status s-${p.status}">${STATUS[p.status] || ''}</span></div>
     ${p.accounts ? `<p class="pnotes" style="color:var(--muted)">${esc(p.accounts)}</p>` : ''}
     ${link ? `<a class="plink" href="${esc(link)}" target="_blank" rel="noopener">${esc(link.replace(/^https?:\/\//, ''))} ↗</a>` : ''}
-    ${p.notes ? `<span class="lbl">Notes &amp; outliers</span><p class="pnotes">${esc(p.notes)}</p>` : ''}
+    ${p.notes ? `<span class="lbl">Notes</span><p class="pnotes">${esc(p.notes)}</p>` : ''}
+    <span class="lbl">Outliers · ${outs.length}</span>
+    ${outs.length ? `<div class="outs" style="padding:6px 0 0">${outs.map(outlierCard).join('')}</div>` : '<p class="pnotes" style="color:var(--muted)">None yet. Star a posted video or add one here.</p>'}
     <span class="lbl">Daily lineup · ${(p.lineup || []).length} video${(p.lineup || []).length === 1 ? '' : 's'}</span>
     ${(p.lineup || []).length ? `<ol class="lineup">${p.lineup.map(l => `<li>${esc(l.concept)} · ${KIND[l.kind] || ''}${l.notes ? ' — ' + esc(l.notes) : ''}</li>`).join('')}</ol>` : '<p class="pnotes" style="color:var(--muted)">No lineup yet.</p>'}
     <div class="factions">
@@ -515,7 +609,7 @@ function pcard(p) {
       <button class="btn" data-act="status" data-id="${p.id}" data-s="${p.status === 'paused' ? 'testing' : 'paused'}">${p.status === 'paused' ? 'Restart' : 'Pause'}</button>
       <button class="btn" data-act="delprod" data-id="${p.id}">Delete</button>
     </div>
-    ${S.confirmProduct === p.id ? `<div class="confirm">Delete ${esc(p.name)}? Its lineup and notes are removed. Videos already on the list stay.
+    ${S.confirmProduct === p.id ? `<div class="confirm">Delete ${esc(p.name)}? Its lineup, outliers and notes are removed. Videos already on the list stay.
       <button class="btn danger" data-act="delprod-yes" data-id="${p.id}">Delete</button><button class="btn" data-act="delprod-no">Keep it</button></div>` : ''}
   </article>`;
 }
@@ -528,9 +622,20 @@ function productForm(p) {
       <label class="f"><span>Product name</span><input id="pn-${k}" name="name" required value="${esc(d.name)}" placeholder="e.g. Grumpy Crawler"></label>
       <label class="f"><span>Short code</span><input id="pc-${k}" name="code" maxlength="4" value="${esc(d.code)}" placeholder="Auto, e.g. GC"></label>
       <label class="f"><span>Status</span><select id="ps-${k}" name="status">${Object.entries(STATUS).map(([v, l]) => `<option value="${v}" ${d.status === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-      <label class="f"><span>Accounts</span><input id="pa-${k}" name="accounts" value="${esc(d.accounts)}" placeholder="@handle TikTok, @handle IG"></label>
+      <label class="f"><span>Accounts</span><input id="pa-${k}" name="accounts" value="${esc(d.accounts)}" placeholder="@handle IG · Facebook"></label>
       <label class="f wide"><span>Store link (optional)</span><input id="pl-${k}" name="link" inputmode="url" value="${esc(d.link)}" placeholder="https://"></label>
-      <label class="f wide"><span>Notes &amp; outliers</span><textarea id="pt-${k}" name="notes" rows="3" placeholder="What's working, outliers to split test, avatar, audio…">${esc(d.notes)}</textarea></label>
+      <label class="f wide"><span>Notes</span><textarea id="pt-${k}" name="notes" rows="3" placeholder="Price, orders, what's working, avatar, audio…">${esc(d.notes)}</textarea></label>
+      <div class="f wide"><span>Outliers: videos to build off</span>
+        <div class="lu-list">${d.outliers.map((o, i) => `<div class="ol-row">
+          <input type="hidden" name="oid" value="${esc(o.id)}"><input type="hidden" name="ovid" value="${esc(o.videoId)}">
+          <input id="ol-${k}-${i}" name="olabel" placeholder="Name, e.g. Gifting box walk" value="${esc(o.label)}" aria-label="Outlier name">
+          <input id="oli-${k}-${i}" class="ol-link" name="olink" inputmode="url" placeholder="Link" value="${esc(o.link)}" aria-label="Link">
+          <input id="olv-${k}-${i}" name="oviews" placeholder="Views" value="${esc(o.views)}" aria-label="Views">
+          <button type="button" data-act="ol-rm" data-i="${i}" aria-label="Remove outlier">×</button>
+          <input id="oln-${k}-${i}" class="ol-notes" name="onotes" placeholder="Notes: platform, what's already been tested" value="${esc(o.notes)}" aria-label="Notes">
+        </div>`).join('')}</div>
+        <div><button type="button" class="btn ghost" data-act="ol-add" style="margin-top:6px">+ Add outlier</button></div>
+      </div>
       <div class="f wide"><span>Daily lineup: videos to make every day</span>
         <div class="lu-list">${d.lineup.map((l, i) => `<div class="lu lu-row">
           <input id="lc-${k}-${i}" name="lc" list="concepts" placeholder="Concept" value="${esc(l.concept)}" aria-label="Concept">
@@ -551,11 +656,13 @@ function productForm(p) {
 function readDraft(form) {
   const fd = new FormData(form);
   const lc = fd.getAll('lc'), lk = fd.getAll('lk'), ln = fd.getAll('ln');
+  const oid = fd.getAll('oid'), ovid = fd.getAll('ovid'), ol = fd.getAll('olabel'), oli = fd.getAll('olink'), olv = fd.getAll('oviews'), oln = fd.getAll('onotes');
   return {
     name: (fd.get('name') || '').trim(), code: (fd.get('code') || '').trim(),
     status: fd.get('status') || 'testing', accounts: (fd.get('accounts') || '').trim(),
     link: (fd.get('link') || '').trim(), notes: (fd.get('notes') || '').trim(),
-    lineup: lc.map((c, i) => ({concept: c.trim(), kind: lk[i] || 'new', notes: (ln[i] || '').trim()}))
+    lineup: lc.map((c, i) => ({concept: c.trim(), kind: lk[i] || 'new', notes: (ln[i] || '').trim()})),
+    outliers: ol.map((l, i) => ({id: oid[i] || uid(), videoId: ovid[i] || '', label: l.trim(), link: (oli[i] || '').trim(), views: (olv[i] || '').trim(), notes: (oln[i] || '').trim()}))
   };
 }
 
@@ -568,8 +675,10 @@ async function addVideos(pid, items) {
   S.busy = true; render();
   const n = await nextSeq(S.date, pid);
   for (let i = 0; i < items.length; i++) {
+    const it = items[i];
     await guard(() => put('videos', uid(), {
-      concept: items[i].concept, kind: items[i].kind || 'new', notes: items[i].notes || '', ref: items[i].ref || '',
+      concept: it.concept, kind: it.kind || 'new', notes: it.notes || '', ref: it.ref || '',
+      outlierId: it.outlierId || '', variable: it.kind === 'split' ? it.variable || '' : '', change: it.change || '',
       productId: pid, date: S.date, made: false, posted: false, n: n + i, t: Date.now() + i
     }));
   }
@@ -582,7 +691,7 @@ async function moveVideo(v, to) {
 
 $app.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]');
-  if (!b || b.tagName === 'INPUT') return;
+  if (!b || b.tagName === 'INPUT' || b.tagName === 'SELECT') return;
   const a = b.dataset.act, id = b.dataset.id;
   switch (a) {
     case 'tab': S.tab = b.dataset.tab; render(); break;
@@ -596,6 +705,13 @@ $app.addEventListener('click', async e => {
     case 'del-no': S.confirm = null; render(); break;
     case 'del-yes': S.confirm = null; await guard(() => remove('videos', id)); break;
     case 'move': { const v = findVideo(id); if (v) await moveVideo(v, b.dataset.to); break; }
+    case 'star': {
+      const v = findVideo(id), p = v && prodById(v.productId);
+      if (!p) break;
+      const o = {id: uid(), videoId: v.id, label: `${v.concept} (${vcode(v, p)})`, link: '', views: v.views ? String(v.views) : '', notes: ''};
+      await guard(() => patch('products', p.id, {outliers: [...outliersOf(p), o]}));
+      break;
+    }
     case 'carry-all': {
       S.busy = true; render();
       const t = today();
@@ -605,18 +721,20 @@ $app.addEventListener('click', async e => {
     case 'lineup': { const p = prodById(b.dataset.pid); if (p && !S.busy) await addVideos(p.id, p.lineup || []); break; }
     case 'newprod':
       S.tab = 'products'; S.editingProduct = 'new';
-      S.draft = {name: '', code: '', status: 'testing', accounts: '', link: '', notes: '', lineup: [
-        {concept: '3-2-1 Reveal', kind: 'split', notes: ''},
-        {concept: 'Discovery / Surprise Store', kind: 'style', notes: ''},
-        {concept: '', kind: 'new', notes: ''}]};
+      S.draft = {name: '', code: '', status: 'testing', accounts: '', link: '', notes: '', outliers: [], lineup: [
+        {concept: 'Split test: best outlier', kind: 'split', notes: ''},
+        {concept: 'New concept', kind: 'new', notes: ''},
+        {concept: 'New style of the winning concept', kind: 'style', notes: ''}]};
       render(); document.getElementById('pn-new')?.focus(); break;
     case 'editprod': { const p = prodById(id); S.editingProduct = id;
-      S.draft = {...p, lineup: (p.lineup || []).map(l => ({...l}))};
+      S.draft = {...p, lineup: (p.lineup || []).map(l => ({...l})), outliers: outliersOf(p).map(o => ({...o}))};
       if (!S.draft.lineup.length) S.draft.lineup.push({concept: '', kind: 'new', notes: ''});
       render(); break; }
     case 'cancelprod': S.editingProduct = null; S.draft = null; render(); break;
     case 'lu-add': S.draft = {...S.draft, ...readDraft(b.closest('form'))}; S.draft.lineup.push({concept: '', kind: 'new', notes: ''}); render(); break;
     case 'lu-rm': S.draft = {...S.draft, ...readDraft(b.closest('form'))}; S.draft.lineup.splice(+b.dataset.i, 1); render(); break;
+    case 'ol-add': S.draft = {...S.draft, ...readDraft(b.closest('form'))}; S.draft.outliers.push({id: uid(), videoId: '', label: '', link: '', views: '', notes: ''}); render(); break;
+    case 'ol-rm': S.draft = {...S.draft, ...readDraft(b.closest('form'))}; S.draft.outliers.splice(+b.dataset.i, 1); render(); break;
     case 'status': await guard(() => patch('products', id, {status: b.dataset.s})); break;
     case 'delprod': S.confirmProduct = id; render(); break;
     case 'delprod-no': S.confirmProduct = null; render(); break;
@@ -626,6 +744,26 @@ $app.addEventListener('click', async e => {
 
 $app.addEventListener('change', e => {
   const el = e.target, a = el.dataset.act;
+  if (el.name === 'kind' && el.form) {
+    el.form.querySelectorAll('.split-only').forEach(x => { x.hidden = el.value !== 'split'; });
+    return;
+  }
+  if (el.name === 'outlierId' && el.form) {
+    const h = el.form.querySelector('.tested-hint'); if (h) h.textContent = testedHint(el.value);
+    return;
+  }
+  if (a === 'views') {
+    const v = findVideo(el.dataset.id) || S.dayVideos.find(x => x.id === el.dataset.id);
+    const val = el.value.trim() === '' ? '' : Math.max(0, Math.round(+el.value) || 0);
+    if (v && v.views !== val) {
+      const p = prodById(v.productId), outs = outliersOf(p);
+      guard(async () => {
+        await patch('videos', el.dataset.id, {views: val});
+        if (outs.some(o => o.videoId === v.id)) await patch('products', p.id, {outliers: outs.map(o => o.videoId === v.id ? {...o, views: String(val)} : o)});
+      });
+    }
+    return;
+  }
   if (a !== 'made' && a !== 'posted') return;
   const on = el.checked;
   const upd = a === 'posted' ? (on ? {posted: true, made: true} : {posted: false}) : (on ? {made: true} : {made: false, posted: false});
@@ -636,20 +774,23 @@ $app.addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target, fd = new FormData(f);
   if (f.dataset.form === 'video') {
-    const base = {concept: (fd.get('concept') || '').trim(), kind: fd.get('kind'), notes: (fd.get('notes') || '').trim(), ref: (fd.get('ref') || '').trim()};
+    const kind = fd.get('kind');
+    const base = {concept: (fd.get('concept') || '').trim(), kind, notes: (fd.get('notes') || '').trim(), ref: (fd.get('ref') || '').trim(),
+      outlierId: kind === 'split' ? fd.get('outlierId') || '' : '', variable: kind === 'split' ? fd.get('variable') || '' : '',
+      change: kind === 'split' ? (fd.get('change') || '').trim() : ''};
     if (!base.concept) return;
     if (f.dataset.id) { S.editing = null; render(); await guard(() => patch('videos', f.dataset.id, base)); }
     else { S.adding = null; await addVideos(f.dataset.pid, Array.from({length: +fd.get('count') || 1}, () => base)); }
   } else if (f.dataset.form === 'product') {
     const d = readDraft(f);
     if (!d.name) return;
-    const body = {...d, code: (d.code || autoCode(d.name)).toUpperCase(), lineup: d.lineup.filter(l => l.concept)};
+    const body = {...d, code: (d.code || autoCode(d.name)).toUpperCase(), lineup: d.lineup.filter(l => l.concept), outliers: d.outliers.filter(o => o.label)};
     const id = f.dataset.id;
     S.editingProduct = null; S.draft = null; render();
     if (id) await guard(() => patch('products', id, body));
     else await guard(() => put('products', uid(), {...body, color: S.products.length % 6, order: Date.now()}));
   } else if (f.dataset.form === 'targets') {
-    const body = {minVideos: Math.max(1, +fd.get('minVideos') || 3), minNew: Math.max(0, +fd.get('minNew') || 0)};
+    const body = {perProduct: Math.max(1, +fd.get('perProduct') || 3), minPerProduct: Math.max(1, +fd.get('minPerProduct') || 2), minNew: Math.max(0, +fd.get('minNew') || 0)};
     await guard(() => put('settings', 'main', body));
     S.settings = {...S.settings, ...body}; S.note = ''; render();
   }
@@ -670,11 +811,13 @@ S.date = S.lastToday = today();
   S.mode = 'local';
   const t = S.date, pid = 'example';
   mem.products[pid] = {name: 'Example product', code: 'EX', status: 'testing', accounts: '@example.shop TikTok', link: '', notes: 'Preview data. Open this page in Claude to use your real list.', color: 0, order: 1,
+    outliers: [{id: 'o1', videoId: '', label: 'Gifting box walk', link: '', views: '48,000', notes: 'Facebook'}],
     lineup: [{concept: '3-2-1 Reveal', kind: 'split', notes: ''}, {concept: 'Discovery / Surprise Store', kind: 'style', notes: ''}, {concept: 'Gifting / Gift Reaction', kind: 'new', notes: ''}]};
   [['3-2-1 Reveal', 'split', 'Copy the outlier: same hook, new audio', true, true],
    ['Discovery / Surprise Store', 'style', 'Night-time store walk version', true, false],
    ['Gifting / Gift Reaction', 'new', 'Partner opens it on the couch', false, false]]
-    .forEach(([concept, kind, notes, made, posted], i) => { mem.videos['ex' + i] = {concept, kind, notes, ref: '', productId: pid, date: t, made, posted, n: i + 1, t: i}; });
+    .forEach(([concept, kind, notes, made, posted], i) => { mem.videos['ex' + i] = {concept, kind, notes, ref: 'https://example.com', productId: pid, date: t, made, posted, n: i + 1, t: i,
+      outlierId: kind === 'split' ? 'o1' : '', variable: kind === 'split' ? 'text' : '', change: kind === 'split' ? '"He said he wanted nothing for Christmas"' : '', views: posted ? 2100 : ''}; });
   memEmit();
 })();
 </script>
